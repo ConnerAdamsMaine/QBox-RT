@@ -1,9 +1,31 @@
--- Texture reloader configuration
+-- Texture reloader configuration system
+-- Loads user defaults and provides validation
 
+local Defaults = {}
+
+-- Safely load user defaults if available
+local function LoadUserDefaults()
+    if GetResourcePath('404_reloadTexture') then
+        local defaultsPath = GetResourcePath('404_reloadTexture') .. '/shared/defaults.lua'
+        
+        -- Try to load user defaults
+        local loadSuccess = pcall(function()
+            Defaults = require('shared.defaults')
+        end)
+        
+        if not loadSuccess then
+            Defaults = {}
+        end
+    end
+end
+
+LoadUserDefaults()
+
+-- Configuration with validation
 local Config = {
     -- Render distance settings
     renderDistance = {
-        default = 200.0,
+        default = Defaults.renderDistance or 200.0,
         min = 50.0,
         max = 1000.0,
         description = "Distance in meters to scan for entities"
@@ -11,7 +33,7 @@ local Config = {
     
     -- Batch processing settings
     batchSize = {
-        default = 5,
+        default = Defaults.batchSize or 5,
         min = 1,
         max = 20,
         description = "Number of textures to load per batch"
@@ -19,7 +41,7 @@ local Config = {
     
     -- Concurrent request limiting
     maxConcurrent = {
-        default = 10,
+        default = Defaults.maxConcurrent or 10,
         min = 1,
         max = 50,
         description = "Maximum concurrent texture requests"
@@ -27,21 +49,21 @@ local Config = {
     
     -- Timing settings
     requestDelay = {
-        default = 100,
+        default = Defaults.requestDelay or 100,
         min = 10,
         max = 5000,
         description = "Milliseconds between batch requests"
     },
     
     modelLoadTimeout = {
-        default = 100,
+        default = Defaults.modelLoadTimeout or 100,
         min = 10,
         max = 1000,
         description = "Timeout in 10ms intervals for model loading"
     },
     
     -- Feature flags
-    features = {
+    features = Defaults.features or {
         progressUpdates = true,
         autoCleanup = true,
         sortByDistance = true

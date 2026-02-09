@@ -1,13 +1,18 @@
 -- Texture reloading system
 -- Limits concurrent requests and processes within render distance
 
+local Config = require('shared.config')
+local ProgressBar = require('deps.lib')
+
 local TextureReloader = {
-    renderDistance = 200.0,
-    batchSize = 5,
-    maxConcurrent = 10,
-    requestDelay = 100, -- ms between batch requests
+    renderDistance = Config.GetSetting('renderDistance'),
+    batchSize = Config.GetSetting('batchSize'),
+    maxConcurrent = Config.GetSetting('maxConcurrent'),
+    requestDelay = Config.GetSetting('requestDelay'),
+    modelLoadTimeout = Config.GetSetting('modelLoadTimeout'),
     isReloading = false,
-    processingCount = 0
+    processingCount = 0,
+    progressBar = ProgressBar
 }
 
 local function GetPlayersInRenderDistance()
@@ -78,15 +83,18 @@ local function ReloadModelTextures(model)
     
     RequestModel(model)
     local timeout = 0
+    local maxTimeout = TextureReloader.modelLoadTimeout
     
-    while not HasModelLoaded(model) and timeout < 100 do
+    while not HasModelLoaded(model) and timeout < maxTimeout do
         Wait(10)
         timeout = timeout + 1
     end
 
     if HasModelLoaded(model) then
         RebuildModel(model)
-        UnloadModel(model)
+        if Config.GetSetting('features').autoCleanup then
+            UnloadModel(model)
+        end
         return true
     end
     
@@ -142,6 +150,9 @@ function TextureReloader:Start()
     local processed = 0
     local currentBatch = 1
 
+    -- Start progress bar
+    self.progressBar:Start(totalToProcess * 0.1, "Reloading textures...")
+
     -- Process entities
     for i = 1, #entities, self.batchSize do
         if not self.isReloading then break end
@@ -149,6 +160,8 @@ function TextureReloader:Start()
         local batchProcessed = ProcessBatch(entities, i, self.batchSize)
         processed = processed + batchProcessed
         
+        -- Update progress bar and chat
+        self.progressBar:SetProgress(processed, totalToProcess)
         TriggerEvent('chat:addMessage', {
             args = {"Textures", ("Progress: %d/%d"):format(processed, totalToProcess)}
         })
@@ -174,6 +187,8 @@ function TextureReloader:Start()
             processed = processed + 1
         end
 
+        -- Update progress bar and chat
+        self.progressBar:SetProgress(processed, totalToProcess)
         TriggerEvent('chat:addMessage', {
             args = {"Textures", ("Progress: %d/%d"):format(processed, totalToProcess)}
         })
@@ -182,6 +197,7 @@ function TextureReloader:Start()
     end
 
     self.isReloading = false
+    self.progressBar:Stop()
     TriggerEvent('chat:addMessage', {
         args = {"Textures", "Reload complete! (" .. processed .. " textures reloaded)"}
     })
@@ -190,6 +206,7 @@ end
 function TextureReloader:Stop()
     if self.isReloading then
         self.isReloading = false
+        self.progressBar:Stop()
         TriggerEvent('chat:addMessage', {
             args = {"Textures", "Texture reload cancelled"}
         })
@@ -197,15 +214,39 @@ function TextureReloader:Stop()
 end
 
 function TextureReloader:SetRenderDistance(distance)
-    self.renderDistance = distance
+    local success, clamped = Config.SetSetting('renderDistance', distance)
+    if success then
+        self.renderDistance = clamped
+    end
+    return success, clamped
 end
 
 function TextureReloader:SetBatchSize(size)
-    self.batchSize = math.max(1, size)
+    local success, clamped = Config.SetSetting('batchSize', size)
+    if success then
+        self.batchSize = clamped
+    end
+    return success, clamped
 end
 
 function TextureReloader:SetMaxConcurrent(count)
-    self.maxConcurrent = math.max(1, count)
+    local success, clamped = Config.SetSetting('maxConcurrent', count)
+    if success then
+        self.maxConcurrent = clamped
+    end
+    return success, clamped
+end
+
+function TextureReloader:SetRequestDelay(delay)
+    local success, clamped = Config.SetSetting('requestDelay', delay)
+    if success then
+        self.requestDelay = clamped
+    end
+    return success, clamped
+end
+
+function TextureReloader:GetConfig()
+    return Config.GetAll()
 end
 
 return TextureReloader

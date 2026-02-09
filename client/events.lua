@@ -11,20 +11,50 @@ RegisterNetEvent('404_reloadTexture:stop', function()
 end)
 
 RegisterNetEvent('404_reloadTexture:config', function(setting, value)
+    local success, result = false, nil
+    
     if setting == 'render' then
-        TextureReloader:SetRenderDistance(value)
-        TriggerEvent('chat:addMessage', {
-            args = {"Textures", "Render distance set to " .. value .. "m"}
-        })
+        success, result = TextureReloader:SetRenderDistance(value)
+        if success then
+            TriggerEvent('chat:addMessage', {
+                args = {"Textures", "Render distance: " .. result .. "m"}
+            })
+        end
     elseif setting == 'batch' then
-        TextureReloader:SetBatchSize(value)
-        TriggerEvent('chat:addMessage', {
-            args = {"Textures", "Batch size set to " .. value}
-        })
+        success, result = TextureReloader:SetBatchSize(value)
+        if success then
+            TriggerEvent('chat:addMessage', {
+                args = {"Textures", "Batch size: " .. result}
+            })
+        end
     elseif setting == 'concurrent' then
-        TextureReloader:SetMaxConcurrent(value)
+        success, result = TextureReloader:SetMaxConcurrent(value)
+        if success then
+            TriggerEvent('chat:addMessage', {
+                args = {"Textures", "Max concurrent: " .. result}
+            })
+        end
+    elseif setting == 'delay' then
+        success, result = TextureReloader:SetRequestDelay(value)
+        if success then
+            TriggerEvent('chat:addMessage', {
+                args = {"Textures", "Request delay: " .. result .. "ms"}
+            })
+        end
+    elseif setting == 'status' then
+        local config = TextureReloader:GetConfig()
         TriggerEvent('chat:addMessage', {
-            args = {"Textures", "Max concurrent set to " .. value}
+            args = {"Textures", "Distance: " .. config.renderDistance .. "m | Batch: " .. config.batchSize .. " | Concurrent: " .. config.maxConcurrent}
+        })
+    else
+        TriggerEvent('chat:addMessage', {
+            args = {"Textures", "Unknown setting: " .. setting}
+        })
+    end
+    
+    if not success and result == nil then
+        TriggerEvent('chat:addMessage', {
+            args = {"Textures", "Invalid value for " .. setting}
         })
     end
 end)

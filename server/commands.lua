@@ -13,10 +13,7 @@ local function ValidateSource(source)
     return true
 end
 
-lib.addCommand('reloadtex', {
-    help = 'Reload textures within render distance',
-    restricted = nil
-}, function(source, args)
+local function ReloadTexCommand(source, args)
     if not ValidateSource(source) then
         print("^1[404_reloadTexture] Invalid source: " .. tostring(source) .. "^0")
         return
@@ -29,7 +26,17 @@ lib.addCommand('reloadtex', {
     if not success then
         print("^1[404_reloadTexture] Failed to trigger start event for player " .. source .. "^0")
     end
-end)
+end
+
+lib.addCommand('reloadtex', {
+    help = 'Reload textures within render distance',
+    restricted = nil
+}, ReloadTexCommand)
+
+lib.addCommand('rt', {
+    help = 'Reload textures within render distance (alias)',
+    restricted = nil
+}, ReloadTexCommand)
 
 lib.addCommand('stoptex', {
     help = 'Stop ongoing texture reload',
